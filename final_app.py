@@ -183,7 +183,7 @@ elif menu == "AI Assistant":
     import os
 
     # Using your provided key
-    client = Groq(st.secrets)
+    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
     st.title("🤖 AI Smart Assistant (JUHI)")
     st.write("I am JUHI, your City-Pulse AI 2.0 Ultra assistant. I am using the latest neural engine to help you.")
