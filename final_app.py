@@ -190,7 +190,7 @@ elif menu == "AI Assistant":
 
     # Initialize the Groq Client
     # Best practice: client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-    GROQ_API_KEY = "gsk_ozPX..."
+    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
     def juhi_speaks(text):
         """Converts AI text response to speech."""
