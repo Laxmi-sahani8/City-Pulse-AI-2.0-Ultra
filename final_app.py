@@ -146,7 +146,8 @@ if menu == "Predictive Dashboard":
     with c1:
         st.metric("Total Historical Cases (Past)", f"{int(df_sel[val_col].sum()):,}")
     with c2:
-        day_of_year = datetime.now().timetuple().tm_yday
+        
+        day_of_year = datetime.datetime.now().timetuple().tm_yday
         present_est = int((df_sel[val_col].mean() / 365) * day_of_year)
         st.metric("Estimated Cases 2026 (Present)", f"{present_est:,}", delta="Live Tracking")
     with c3:
