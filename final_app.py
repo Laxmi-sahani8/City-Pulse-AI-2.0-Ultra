@@ -174,7 +174,6 @@ elif menu == "Battle Mode":
     s1 = b1.selectbox("State A", df_final[loc_col].unique(), key="a")
     s2 = b2.selectbox("State B", df_final[loc_col].unique(), key="b")
     st.plotly_chart(px.bar(df_final[df_final[loc_col].isin([s1, s2])], x=loc_col, y=val_col, color=loc_col, barmode='group'), use_container_width=True)
-
 # --- FEATURE 3: SMART AI ASSISTANT (JUHI) ---
 elif menu == "AI Assistant":
     from groq import Groq
@@ -182,56 +181,73 @@ elif menu == "AI Assistant":
     import base64
     import os
 
-    # Using your provided key
-    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-
     st.title("🤖 AI Smart Assistant (JUHI)")
-    st.write("I am JUHI, your City-Pulse AI 2.0 Ultra assistant. I am using the latest neural engine to help you.")
+    st.info("Juhi is now even smarter! She remembers your entire conversation context.")
+
+    # 1. INITIALIZE MEMORY (Using Streamlit Session State)
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    # Initialize the Groq Client
+    # Best practice: client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+    GROQ_API_KEY = "gsk_ozPX..."
 
     def juhi_speaks(text):
+        """Converts AI text response to speech."""
         try:
-            tts = gTTS(text=text, lang='en')
+            # Limit voice output length for faster processing
+            short_text = text[:200] + "..." if len(text) > 200 else text
+            tts = gTTS(text=short_text, lang='en')
             tts.save("voice_temp.mp3")
             with open("voice_temp.mp3", "rb") as f:
                 data = f.read()
                 b64 = base64.b64encode(data).decode()
                 st.markdown(f'<audio autoplay="true" src="data:audio/mp3;base64,{b64}">', unsafe_allow_html=True)
-        except:
+        except Exception as e:
             pass
 
-    q = st.chat_input("Ask JUHI about safety...")
+    # 2. DISPLAY CONVERSATION HISTORY
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-    if q:
+    # 3. CHAT INPUT LOGIC
+    if q := st.chat_input("Ask JUHI about city safety or analytics..."):
+        # Save and display user message
+        st.session_state.messages.append({"role": "user", "content": q})
         with st.chat_message("user"):
-            st.write(q)
+            st.markdown(q)
 
+        # Generate and display Assistant Response
         with st.chat_message("assistant"):
             try:
-                # UPDATED MODEL NAME HERE
+                # Setting up the AI Persona (System Prompt)
+                system_prompt = {
+                    "role": "system", 
+                    "content": f"You are JUHI, an elite safety AI for City-Pulse 2.0. You analyze urban safety data professionally. Remember context from this conversation. The current user is {st.session_state.get('user', 'Guest')}."
+                }
+                
+                # Combine System Prompt + Full History to provide "Memory"
+                messages_to_send = [system_prompt] + st.session_state.messages
+
+                # Call the AI Model
                 chat_completion = client.chat.completions.create(
-                    messages=[
-                        {"role": "system", "content": "You are JUHI, an elite safety AI. Provide strong and fast advice."},
-                        {"role": "user", "content": q}
-                    ],
-                    model="llama-3.3-70b-versatile", # Updated to the latest stable model
+                    messages=messages_to_send,
+                    model="llama-3.1-8b-instant",
                 )
                 
                 response = chat_completion.choices[0].message.content
-                st.write(response)
+                st.markdown(response)
+                
+                # Play audio and save assistant message to history
                 juhi_speaks(response)
+                st.session_state.messages.append({"role": "assistant", "content": response})
                 
             except Exception as e:
-                # If the 70b model is too heavy, let's try the 8b version of Llama 3.1
-                try:
-                    chat_completion = client.chat.completions.create(
-                        messages=[
-                            {"role": "system", "content": "You are JUHI, an elite safety AI."},
-                            {"role": "user", "content": q}
-                        ],
-                        model="llama-3.1-8b-instant", # Backup model
-                    )
-                    response = chat_completion.choices[0].message.content
-                    st.write(response)
-                    juhi_speaks(response)
-                except:
-                    st.error(f"Error: {e}")
+                st.error("The AI engine is currently busy. Please try again in a moment.")
+
+    # 4. MEMORY MANAGEMENT
+    st.divider()
+    if st.button("🗑️ Clear Chat History"):
+        st.session_state.messages = []
+        st.rerun()
