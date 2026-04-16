@@ -5,3 +5,4 @@ groq
 gTTS
 python-dotenv
 scikit-learn
+fpdf
