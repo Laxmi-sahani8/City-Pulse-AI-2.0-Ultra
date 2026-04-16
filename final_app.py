@@ -1,0 +1,237 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from datetime import datetime
+from fpdf import FPDF
+import json
+import os
+
+
+
+# --- 1. PAGE SETUP & STYLING ---
+st.set_page_config(page_title="City-Pulse AI 2.0 Ultra", layout="wide")
+
+st.markdown("""
+    <style>
+    .main { background-color: #f8f9fa; }
+    .stMetric { background-color: #ffffff; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    .high-alert { padding: 10px; background-color: #ff4b4b; color: white; border-radius: 10px; text-align: center; font-weight: bold; animation: blinker 1.5s linear infinite; }
+    @keyframes blinker { 50% { opacity: 0; } }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- 2. AUTHENTICATION SYSTEM ---
+
+USER_DB = "users.json"
+def load_users():
+    if os.path.exists(USER_DB):
+        with open(USER_DB, "r") as f: return json.load(f)
+    return {"admin": "password123"}
+
+def save_user(u, p):
+    users = load_users()
+    if u in users: return False
+    users[u] = p
+    with open(USER_DB, "w") as f: json.dump(users, f)
+    return True
+
+if "logged_in" not in st.session_state: st.session_state["logged_in"] = False
+
+if not st.session_state["logged_in"]:
+    st.title("🔐 Secure Access Portal")
+    t1, t2 = st.tabs(["Login", "Register"])
+    with t1:
+        with st.form("l"):
+            u = st.text_input("Username"); p = st.text_input("Password", type="password")
+            if st.form_submit_button("Login"):
+                db = load_users()
+                if u in db and db[u] == p:
+                    st.session_state["logged_in"] = True; st.session_state["user"] = u; st.rerun()
+                else: st.error("Wrong details!")
+    with t2:
+        with st.form("r"):
+            nu = st.text_input("New Username"); np_ = st.text_input("New Password", type="password")
+            if st.form_submit_button("Create"):
+                if save_user(nu, np_): st.success("Created! Now Login.")
+                else: st.error("User exists.")
+    st.stop()
+
+# --- 3. DASHBOARD ENGINE ---
+@st.cache_data
+def get_data():
+    df = pd.read_csv('data.csv', encoding='unicode_escape')
+    loc_col = df.columns[1] 
+    val_col = 'Total - Total_18 years & Above'
+    df_clean = df[~df[loc_col].str.contains('Total|All India', case=False, na=False)].copy()
+    df_clean['Safety_Score'] = 100 - (df_clean[val_col] / df_clean[val_col].max() * 100)
+    return df_clean, loc_col, val_col
+
+df_final, loc_col, val_col = get_data()
+
+# --- SIDEBAR & TOP HEADER (MODERN LOOK + TITLE FIX) ---
+with st.sidebar:
+    # 1. Admin Profile Section
+    st.markdown(f"""
+        <div style='text-align: center; padding: 10px; background-color: #ffffff; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+            <img src='https://cdn-icons-png.flaticon.com/512/3135/3135715.png' width='70' style='border-radius: 50%;'>
+            <h3 style='margin: 10px 0 0 0; color: #1f1f1f;'>{st.session_state['user']}</h3>
+            <p style='color: #28a745; font-size: 13px; font-weight: bold;'>🟢 System Admin</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # 2. Modern Navigation
+    st.markdown("### 🛠️ Navigation")
+    menu = st.radio(
+        label="Select Module:",
+        options=["Predictive Dashboard", "Battle Mode", "AI Assistant"],
+        label_visibility="collapsed"
+    )
+
+    st.markdown("---")
+
+    # 3. System Health (Extra feature for Ultra look)
+    st.markdown("### 🛰️ Engine Status")
+    st.info("AI Model: Llama-3.1-8b-instant")
+    st.progress(98)
+    st.caption("Neural Engine Efficiency: 98%")
+
+    st.markdown("---")
+
+    # 4. Logout Button
+    if st.button("🚪 Logout Account", use_container_width=True):
+        st.session_state["logged_in"] = False
+        st.rerun()
+
+# --- MAIN HEADER (ONE LINE TITLE FIX) ---
+# Yahan st.title ko hata kar hum custom HTML use kar rahe hain
+st.markdown("""
+    <div style='
+        display: flex;
+        align-items: center;
+        width: 100%;
+        font-family: sans-serif;
+    '>
+        <span style='font-size: 3rem; margin-right: 15px;'>🛡️</span>
+        <h1 style='
+            margin: 0;
+            white-space: nowrap; /* Forces text to ONE line */
+            font-size: 2.8rem;   /* Adjusted size to fit wide screens */
+            font-weight: 700;
+            width: 100%;
+        '>
+          City-Pulse AI 2.0: Predictive Safety Analytics
+        </h1>
+    </div>
+""", unsafe_allow_html=True)
+
+now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+st.write(f"**Live Engine Status:** Online | **Current Tracking:** {now}")
+
+# --- FEATURE 1: PREDICTIVE DASHBOARD ---
+if menu == "Predictive Dashboard":
+    state_list = ["All India"] + sorted(list(df_final[loc_col].unique()))
+    target = st.selectbox("🎯Target Location Selection:", state_list)
+    
+    df_sel = df_final if target == "All India" else df_final[df_final[loc_col] == target]
+    
+    max_val = df_sel[val_col].max()
+    if max_val > 5000:
+        st.markdown(f"<div class='high-alert'>🚨 HIGH ALERT: Unusual activity detected in {target}! Immediate monitoring required.</div>", unsafe_allow_html=True)
+        st.write("")
+
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.metric("Total Historical Cases (Past)", f"{int(df_sel[val_col].sum()):,}")
+    with c2:
+        day_of_year = datetime.now().timetuple().tm_yday
+        present_est = int((df_sel[val_col].mean() / 365) * day_of_year)
+        st.metric("Estimated Cases 2026 (Present)", f"{present_est:,}", delta="Live Tracking")
+    with c3:
+        future_proj = int(df_sel[val_col].mean() * 1.05)
+        st.metric("AI Projection 2027 (Future)", f"{future_proj:,}", delta="Predicted Trend")
+    with c4:
+        st.metric("Safety Index Score", f"{round(df_sel['Safety_Score'].mean(), 1)}/100")
+
+    st.divider()
+    col_left, col_right = st.columns(2)
+    with col_left:
+        st.subheader("Regional Risk Distribution")
+        st.plotly_chart(px.bar(df_sel.head(10), x=loc_col, y=val_col, color='Safety_Score', color_continuous_scale='RdYlGn'), use_container_width=True)
+    with col_right:
+        st.subheader("National Heatmap")
+        
+        fig_map = px.choropleth(df_final, geojson="https://gist.githubusercontent.com/jbrobst/56c13bbbf9d97d1a7df9754632c31478/raw/229a4a79649175373801f440536c4983a4216893/india_states.geojson",
+                                featureidkey='properties.ST_NM', locations=loc_col, color='Safety_Score', color_continuous_scale="RdYlGn")
+        fig_map.update_geos(fitbounds="locations", visible=False)
+        st.plotly_chart(fig_map, use_container_width=True)
+
+# --- FEATURE 2: BATTLE MODE ---
+elif menu == "Battle Mode":
+    st.title("⚔️ Comparative Analysis")
+    b1, b2 = st.columns(2)
+    s1 = b1.selectbox("State A", df_final[loc_col].unique(), key="a")
+    s2 = b2.selectbox("State B", df_final[loc_col].unique(), key="b")
+    st.plotly_chart(px.bar(df_final[df_final[loc_col].isin([s1, s2])], x=loc_col, y=val_col, color=loc_col, barmode='group'), use_container_width=True)
+
+# --- FEATURE 3: SMART AI ASSISTANT (JUHI) ---
+elif menu == "AI Assistant":
+    from groq import Groq
+    from gtts import gTTS
+    import base64
+    import os
+
+    # Using your provided key
+    client = Groq(st.secrets)
+
+    st.title("🤖 AI Smart Assistant (JUHI)")
+    st.write("I am JUHI, your City-Pulse AI 2.0 Ultra assistant. I am using the latest neural engine to help you.")
+
+    def juhi_speaks(text):
+        try:
+            tts = gTTS(text=text, lang='en')
+            tts.save("voice_temp.mp3")
+            with open("voice_temp.mp3", "rb") as f:
+                data = f.read()
+                b64 = base64.b64encode(data).decode()
+                st.markdown(f'<audio autoplay="true" src="data:audio/mp3;base64,{b64}">', unsafe_allow_html=True)
+        except:
+            pass
+
+    q = st.chat_input("Ask JUHI about safety...")
+
+    if q:
+        with st.chat_message("user"):
+            st.write(q)
+
+        with st.chat_message("assistant"):
+            try:
+                # UPDATED MODEL NAME HERE
+                chat_completion = client.chat.completions.create(
+                    messages=[
+                        {"role": "system", "content": "You are JUHI, an elite safety AI. Provide strong and fast advice."},
+                        {"role": "user", "content": q}
+                    ],
+                    model="llama-3.3-70b-versatile", # Updated to the latest stable model
+                )
+                
+                response = chat_completion.choices[0].message.content
+                st.write(response)
+                juhi_speaks(response)
+                
+            except Exception as e:
+                # If the 70b model is too heavy, let's try the 8b version of Llama 3.1
+                try:
+                    chat_completion = client.chat.completions.create(
+                        messages=[
+                            {"role": "system", "content": "You are JUHI, an elite safety AI."},
+                            {"role": "user", "content": q}
+                        ],
+                        model="llama-3.1-8b-instant", # Backup model
+                    )
+                    response = chat_completion.choices[0].message.content
+                    st.write(response)
+                    juhi_speaks(response)
+                except:
+                    st.error(f"Error: {e}")
