@@ -126,9 +126,10 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-st.write(f"**Live Engine Status:** Online | **Current Tracking:** {now}")
+now = datetime.datetime.now() + datetime.timedelta(hours=5, minutes=30)
+current_time = now.strftime("%Y-%m-%d %H:%M:%S")
 
+st.markdown(f"**Live Engine Status:** Online | **Current Tracking:** {current_time}")
 # --- FEATURE 1: PREDICTIVE DASHBOARD ---
 if menu == "Predictive Dashboard":
     state_list = ["All India"] + sorted(list(df_final[loc_col].unique()))
