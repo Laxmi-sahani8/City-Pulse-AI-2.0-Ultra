@@ -4,3 +4,4 @@ plotly
 groq
 gTTS
 python-dotenv
+scikit-learn
