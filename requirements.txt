@@ -1,8 +1,9 @@
 streamlit
 pandas
 plotly
-groq
-gTTS
-python-dotenv
+numpy
 scikit-learn
 fpdf
+streamlit-autorefresh
+groq
+gTTS
