@@ -126,12 +126,25 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-now = datetime.datetime.now() + datetime.timedelta(hours=5, minutes=30)
-current_time = now.strftime("%Y-%m-%d %H:%M:%S")
-
-st.markdown(f"**Live Engine Status:** Online | **Current Tracking:** {current_time}")
 # --- FEATURE 1: PREDICTIVE DASHBOARD ---
 if menu == "Predictive Dashboard":
+    # This line forces the app to refresh every 1 second
+    st_autorefresh(interval=1000, key="clock_refresh") 
+
+    # Calculate live Indian Standard Time (IST)
+    now = datetime.datetime.now() + datetime.timedelta(hours=5, minutes=30)
+    current_time = now.strftime("%H:%M:%S")
+    current_date = now.strftime("%Y-%m-%d")
+
+    # Display the modern Live Status Header
+    st.markdown(f"""
+        <div style="background-color: #f0f2f6; padding: 15px; border-radius: 10px; border-left: 5px solid #007bff; margin-bottom: 20px;">
+            <span style="font-size: 18px; font-weight: bold;">🛰️ Live Engine Status: </span>
+            <span style="color: green; font-weight: bold;">Online</span> | 
+            <span style="font-size: 18px; font-weight: bold;">🕒 Time: </span> {current_time} | 
+            <span style="font-size: 18px; font-weight: bold;">📅 Date: </span> {current_date}
+        </div>
+    """, unsafe_allow_html=True)
     state_list = ["All India"] + sorted(list(df_final[loc_col].unique()))
     target = st.selectbox("🎯Target Location Selection:", state_list)
     
