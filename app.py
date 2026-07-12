@@ -9,7 +9,7 @@ st.title("🛡️City-Pulse: Missing Person Analytics")
 st.markdown("Yeh dashboard India ke missing person data ko analyze karta hai.")
 
 # 1. Data Load
-@st.cache_data # Isse website fast load hogi
+@st.cache_data 
 def load_data():
     df = pd.read_csv('data.csv', encoding='unicode_escape')
     location_col = df.columns[1]
